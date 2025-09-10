@@ -119,6 +119,7 @@ if(NOT vk-bootstrap_FOUND)
     )
 
     set("VK_BOOTSTRAP_VULKAN_HEADER_DIR" ${Vulkan_INCLUDE_DIRS} CACHE FILEPATH "" FORCE)
+    #set(VK_BOOTSTRAP_VULKAN_HEADER_SEARCH OFF)
 
     FetchContent_MakeAvailable(vk-bootstrap)    
 else()
@@ -221,3 +222,5 @@ macro(CREATE_VULKAN_EXECUTABLE target)
 endmacro()
 
 CREATE_VULKAN_EXECUTABLE(VulkanStart)
+
+CREATE_VULKAN_EXECUTABLE(StudentExercises03)
