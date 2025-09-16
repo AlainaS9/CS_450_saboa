@@ -11,6 +11,19 @@ using namespace std;
 
 namespace student {
 
+    struct VulkanQueue {
+        vk::Queue queue {};
+        unsigned int index = 0;
+    };
+
+    struct VulkanSwapChain {
+        vk::SwapchainKHR chain {};
+        vector<vk::Image> images {};
+        vector<vk::ImageView> views {};
+        vk::Extent2D extent {};
+        vk::Format format {};
+    };
+
 struct VulkanInitData {
     string appName = "";
     int minVersionMajor = 1;
@@ -26,7 +39,21 @@ struct VulkanInitData {
 
     vkb::Device bootDevice {}; //don't clean
     vk::Device device {};
+
+    VulkanSwapChain swapchain {};
+
+    VulkanQueue graphicsQueue {};
+    VulkanQueue presentQueue {};
+
 };
+
+    bool getVulkanQueue(vkb::Device vkbDevice,
+                        vkb::QueueType queueType,
+                        VulkanQueue &queueData);
+
+    bool createVulkanSwapchain(VulkanInitData &vkInitData);
+    void recreateVulkanSwapchain(VulkanInitData &vkInitData);
+    void cleanupVulkanSwapchain(VulkanInitData &vkInitData);
 
     bool createVulkanSetup(VulkanInitData &vkInitData);
     void cleanupVulkanSetup(VulkanInitData &vkInitData);

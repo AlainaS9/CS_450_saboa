@@ -2,6 +2,69 @@
 
 namespace student {
 
+        bool getVulkanQueue(vkb::Device vkbDevice,
+                        vkb::QueueType queueType,
+                        VulkanQueue &queueData) {
+
+            // Get the desired queue
+            auto qRet = vkbDevice.get_queue(queueType);
+            if(!qRet) {
+                cerr << "ERROR: " << qRet.error().message() << endl;
+                return false;
+            }
+
+            queueData.queue = vk::Queue { qRet.value() };
+            queueData.index = vkbDevice.get_queue_index(queueType).value();
+
+            return true;
+        }
+
+    bool createVulkanSwapchain(VulkanInitData &vkInitData) {
+        vkb::SwapchainBuilder swapBuilder { vkInitData.bootDevice };
+        VkSurfaceFormatKHR format;
+        format.format = VK_FORMAT_B8G8R8A8_UNORM;
+        format.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+
+        auto swapRet = swapBuilder.set_desired_format(format).build();
+        if(!swapRet) {
+            cerr << "ERROR: " << swapRet.error().message() << endl;
+            return false;
+        }
+
+        vkb::Swapchain vkbSwapchain = swapRet.value();
+        vkInitData.swapchain.chain = vk::SwapchainKHR { vkbSwapchain.swapchain };
+        vkInitData.swapchain.extent = vk::Extent2D { vkbSwapchain.extent };
+        vkInitData.swapchain.format = vk::Format { vkbSwapchain.image_format };
+
+        vector<VkImage> vkImages = vkbSwapchain.get_images().value();
+        vector<VkImageView> vkViews = vkbSwapchain.get_image_views().value();
+        for(int i = 0; i < vkImages.size(); i++) {
+            vkInitData.swapchain.images.push_back(vk::Image { vkImages.at(i) });
+            vkInitData.swapchain.views.push_back(vk::ImageView { vkViews.at(i) });
+        }
+
+        return true;
+
+    }
+    void recreateVulkanSwapchain(VulkanInitData &vkInitData) {
+        vkInitData.device.waitIdle();
+        cleanupVulkanSwapchain(vkInitData);
+        createVulkanSwapchain(vkInitData);
+
+
+    }
+    void cleanupVulkanSwapchain(VulkanInitData &vkInitData) {
+        for(int i = 0; i < vkInitData.swapchain.views.size(); i++ ) {
+            vkInitData.device.destroyImageView(vkInitData.swapchain.views.at(i));
+        }
+        vkInitData.swapchain.views.clear();
+        vkInitData.swapchain.images.clear();
+        vkInitData.swapchain.extent = vk::Extent2D {};
+        vkInitData.swapchain.format = vk::Format {};
+        vkInitData.device.destroySwapchainKHR(vkInitData.swapchain.chain);
+
+    }
+
     bool createVulkanSetup(VulkanInitData &vkInitData) {
         vkb::InstanceBuilder builder;
         auto instRet = builder.set_app_name(vkInitData.appName.c_str())
@@ -67,6 +130,23 @@ namespace student {
         vkInitData.device = vk::Device { vkbDevice.device };
         vkInitData.bootDevice = vkbDevice;
 
+        // SWAPCHAIN 
+        if(!createVulkanSwapchain(vkInitData)) {
+            return false;
+        }
+
+        // QUEUES
+        if(!getVulkanQueue(vkInitData.bootDevice,
+                            vkb::QueueType::graphics,
+                            vkInitData.graphicsQueue)) {
+         return false;
+        }
+        if(!getVulkanQueue(vkInitData.bootDevice,
+                            vkb::QueueType::present,
+                            vkInitData.presentQueue)) {
+         return false;
+        }
+
         return true;
 
     }
@@ -74,7 +154,7 @@ namespace student {
     void cleanupVulkanSetup(VulkanInitData &vkInitData) {
         
         //TODO
-        vkInitData.instance.destroySurfaceKHR(vkInitData.surface);
+        cleanupVulkanSwapchain(vkInitData);
         
         vkInitData.device.destroy();
         vkInitData.instance.destroySurfaceKHR(vkInitData.surface);
