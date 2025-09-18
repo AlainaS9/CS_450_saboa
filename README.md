@@ -1,6 +1,6 @@
 # CS 450 (Computer Graphics)
 ***Fall 2025***  
-***Author: Your Name Here***  
+***Author: Alaina Sabo***  
 ***Original Author: Dr. Michael J. Reale***  
 ***SUNY Polytechnic Institute*** 
 
