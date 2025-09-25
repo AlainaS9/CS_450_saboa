@@ -41,4 +41,15 @@ namespace student {
                                             int numberFramesInFlight);
     void cleanupVulkanCommandData(VulkanInitData &vkInitData, VulkanCommandData &commandData); 
 
+    uint32_t prepareFrameInFlight(VulkanInitData &vkInitData, VulkanCommandData &commandData,
+                                    uint32_t indexFIF);
+
+    void submitToGraphicsQueue(VulkanInitData &vkInitData,
+                                VulkanCommandData &commandData,
+                                uint32_t indexFIF, uint32_t indexSwap);
+
+    bool presentSwapImage(VulkanInitData &vkInitData,
+                                VulkanCommandData &commandData,
+                                uint32_t indexFIF, uint32_t indexSwap);
+
 }

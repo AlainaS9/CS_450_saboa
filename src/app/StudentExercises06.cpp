@@ -3,9 +3,14 @@
 #include "student/VKSetup.hpp"
 #include "student/VKCommand.hpp"
 #include "student/VKImage.hpp"
+#include "student/VKPipeline.hpp"
 
 using namespace std;
 using namespace student;
+
+struct ForgeVertex {
+glm::vec3 pos;
+};
 
 void recordCommands (VulkanInitData &vkInitData, uint32_t indexFIF, uint32_t indexSwap,
                         vk::CommandBuffer &commandBuffer, 
@@ -69,7 +74,7 @@ void listAvailablePhysicalDevices(VulkanInitData &vkInitData) {
 int main(int argc, char **argv) {
     cout << "BEGIN EXERCISES!!!!" << endl;
 
-    string appName = "Exercises05";
+    string appName = "StudentExercises06";
     string windowTitle = appName;
     int windowWidth = 640;
     int windowHeight = 480;
@@ -105,6 +110,23 @@ int main(int argc, char **argv) {
         queryPools.push_back(vkInitData.device.createQueryPool(qpci));
     }
 
+    VulkanPipelineCreationInfo pipeInfo {};
+    pipeInfo.vertSPVFilename = "build/compiledshaders/" + appName + "/shader.vert.spv";
+    pipeInfo.fragSPVFilename = "build/compiledshaders/" + appName + "/shader.frag.spv";
+    pipeInfo.bindDesc = vk::VertexInputBindingDescription(
+        0, sizeof(ForgeVertex), vk::VertexInputRate::eVertex
+    );
+    pipeInfo.attribDesc.push_back(vk::VertexInputAttributeDescription(
+        0, //location
+        0, //binding
+        vk::Format::eR32G32B32Sfloat, //format
+        offsetof(ForgeVertex, pos) //offset
+    )
+    );
+    // TODO 
+    VulkanPipelineData pipelineData = createBasicVulkanPipeline(vkInitData, pipeInfo);
+
+
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -131,10 +153,12 @@ int main(int argc, char **argv) {
         double nsPerTick = props.limits.timestampPeriod;
         double deltaNs = (timeStamps[1] - timeStamps[0])*nsPerTick;
 
-        cout << "TIME PER FIF " << indexFIF << ": " << deltaNs << endl;
+      //  cout << "TIME PER FIF " << indexFIF << ": " << deltaNs << endl;
         }
 
     vkInitData.device.waitIdle();
+
+    cleanupVulkanPipeline(vkInitData, pipelineData);
 
     for(int i = 0; i < queryPools.size(); i++) {
         vkInitData.device.destroyQueryPool(queryPools[i]);

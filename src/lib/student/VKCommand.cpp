@@ -89,6 +89,69 @@ namespace student {
         cleanupVulkanCommandPool(vkInitData, commandData.commandPool);
     } 
 
+    uint32_t prepareFrameInFlight(VulkanInitData &vkInitData, VulkanCommandData &commandData,
+                                    uint32_t indexFIF) {
+
+        vkInitData.device.waitForFences(
+                        commandData.perFIF[indexFIF].inFlightFence, true, UINT64_MAX
+                    );
+        auto frameResult = vkInitData.device.acquireNextImageKHR(
+                                vkInitData.swapchain.chain, UINT64_MAX,
+                                commandData.perFIF[indexFIF].imageAvailSemaphore, nullptr
+        );
+
+        uint32_t indexSwap = frameResult.value;
+
+        vkInitData.device.resetFences(commandData.perFIF[indexFIF].inFlightFence);
+
+        commandData.perFIF[indexFIF].commandBuffer.reset();
+
+        return indexSwap;
+
+        }
+
+        void submitToGraphicsQueue(VulkanInitData &vkInitData,
+                                VulkanCommandData &commandData,
+                                uint32_t indexFIF, uint32_t indexSwap) {
+            vk::Semaphore waitSem [] = {
+                commandData.perFIF[indexFIF].imageAvailSemaphore
+            };
+
+            vk::Semaphore signalSem [] = {
+                commandData.perSwapRenderDone[indexSwap]
+            };
+
+            vk::PipelineStageFlags waitStages [] = {
+                vk::PipelineStageFlagBits::eColorAttachmentOutput
+            };
+
+            vk::SubmitInfo submitInfo(waitSem, waitStages,
+                                        commandData.perFIF[indexFIF].commandBuffer,
+                                        signalSem);
+            vkInitData.graphicsQueue.queue.submit(submitInfo, commandData.perFIF[indexFIF].inFlightFence);
+
+        }
+
+        bool presentSwapImage(VulkanInitData &vkInitData,
+                                VulkanCommandData &commandData,
+                                uint32_t indexFIF, uint32_t indexSwap) {
+
+            vk::PresentInfoKHR presentInfo {};
+            presentInfo.setWaitSemaphores(commandData.perSwapRenderDone[indexSwap]);
+            presentInfo.setSwapchains(vkInitData.swapchain.chain);
+            presentInfo.setImageIndices(indexSwap);
+
+            bool successPresent = true;
+            try {
+                auto presResult = vkInitData.presentQueue.queue.presentKHR(presentInfo);
+            }
+            catch(vk::OutOfDateKHRError &e) {
+                successPresent = false;
+            }
+
+            return successPresent;
+        }
+
 
 }
     
