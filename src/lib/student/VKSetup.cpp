@@ -117,7 +117,7 @@ namespace student {
             return false;
         }
         vkb::PhysicalDevice vkbPhysicalDevice = phyRet.value();
-
+        vkInitData.physicalDevice = vk::PhysicalDevice { vkbPhysicalDevice.physical_device };
 
         //LOGICAL DEVICE
         vkb::DeviceBuilder devBuilder { vkbPhysicalDevice };

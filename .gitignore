@@ -3,3 +3,4 @@ linux_build/
 ~*.tmp
 ~*.docx
 Prof*
+tests/

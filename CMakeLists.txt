@@ -221,7 +221,17 @@ macro(CREATE_VULKAN_EXECUTABLE target)
     install(DIRECTORY ${PROJECT_BINARY_DIR}/compiledshaders/${target} DESTINATION bin/${target}/build/compiledshaders)
 endmacro()
 
+set(TEST_FOLDER "tests")
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${TEST_FOLDER}")
+    message(STATUS "Tests folder found")
+    include(CTest)
+    enable_testing()
+    add_subdirectory(${TEST_FOLDER})
+endif()
+
 CREATE_VULKAN_EXECUTABLE(VulkanStart)
+
+CREATE_VULKAN_EXECUTABLE(Assign01)
 
 #CREATE_VULKAN_EXECUTABLE(StudentExercises03)
 #CREATE_VULKAN_EXECUTABLE(StudentExercises04)
