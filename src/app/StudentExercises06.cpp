@@ -12,9 +12,13 @@ struct ForgeVertex {
 glm::vec3 pos;
 };
 
+float green = 0.0f;
+float greenInc = 0.01f;
+
 void recordCommands (VulkanInitData &vkInitData, uint32_t indexFIF, uint32_t indexSwap,
                         vk::CommandBuffer &commandBuffer, 
-                        vk::QueryPool &queryPool) {
+                        vk::QueryPool &queryPool,
+                        VulkanPipelineData &pipelineData) {
     commandBuffer.begin(vk::CommandBufferBeginInfo());
 
     commandBuffer.resetQueryPool(queryPool, 0, 2);
@@ -27,13 +31,43 @@ void recordCommands (VulkanInitData &vkInitData, uint32_t indexFIF, uint32_t ind
     );
     performVulkanImageTransition(commandBuffer, colorBarrier);
 
-    // TODO NOW REAL RENDERING COMMANDS
-
     VulkanImageTransition presentBarrier = createVulkanImageTransition(
                                       vkInitData.swapchain.images[indexSwap],
                                       VK_IMAGE_TRANSITION_TYPE::COLOR_TO_PRESENT
     );
     performVulkanImageTransition(commandBuffer, presentBarrier);
+
+    vk::RenderingAttachmentInfoKHR colorAttach{};
+    colorAttach.setImageView(vkInitData.swapchain.views[indexSwap])
+            .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
+            .setLoadOp(vk::AttachmentLoadOp::eClear)
+            .setStoreOp(vk::AttachmentStoreOp::eStore)
+            .setClearValue(vk::ClearColorValue(1.0f, green, 0.0f, 1.0f));
+
+    green += greenInc;
+    if(green > 1.0f) {
+        green = 0.0f;
+    }
+
+    vk::RenderingInfoKHR renderInfo {};
+    renderInfo.setRenderArea(vk::Rect2D{ {0,0}, vkInitData.swapchain.extent })
+                .setLayerCount(1)
+                .setColorAttachments(colorAttach);
+
+    commandBuffer.beginRendering(renderInfo);
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
+                                    pipelineData.graphicsPipeline);
+    
+    vk::Viewport viewport(0,0,
+                        (float)vkInitData.swapchain.extent.width,
+                        (float)vkInitData.swapchain.extent.height,
+                        0.0f, 1.0f);
+    vk::Rect2D scissors({0,0}, vkInitData.swapchain.extent);
+
+    commandBuffer.setViewport(0, {viewport});
+    commandBuffer.setScissor(0, {scissors});
+
+    commandBuffer.endRendering();
     
     commandBuffer.writeTimestamp2(vk::PipelineStageFlagBits2::eBottomOfPipe, queryPool, 1);
 
@@ -126,6 +160,13 @@ int main(int argc, char **argv) {
         offsetof(ForgeVertex, pos) //offset
     )
     );
+    pipeInfo.renderInfo.colorAttachmentCount = 1;
+    pipeInfo.renderInfo.pColorAttachmentFormats = &(vkInitData.swapchain.format);
+    pipeInfo.renderInfo.depthAttachmentFormat = vk::Format::eD32Sfloat;
+    //pipelineCreateInfo.renderInfo = renderInfo;
+
+
+
     // TODO 
     VulkanPipelineData pipelineData = createBasicVulkanPipeline(vkInitData, pipeInfo);
 
@@ -137,7 +178,7 @@ int main(int argc, char **argv) {
         uint32_t indexSwap = prepareFrameInFlight(vkInitData, commandData, indexFIF);
 
         recordCommands(vkInitData, indexFIF, indexSwap, commandData.perFIF[indexFIF].commandBuffer,
-                        queryPools[indexFIF]);
+                        queryPools[indexFIF], pipelineData);
 
         submitToGraphicsQueue(vkInitData, commandData, indexFIF, indexSwap);
 

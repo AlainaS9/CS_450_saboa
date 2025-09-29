@@ -24,6 +24,10 @@ namespace student {
 
         vk::VertexInputBindingDescription bindDesc {};
         vector<vk::VertexInputAttributeDescription> attribDesc {};
+
+        vk::PipelineRenderingCreateInfo renderInfo {};
+
+        
         // TODO
     };
 
