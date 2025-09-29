@@ -86,6 +86,9 @@ int main(int argc, char **argv) {
 
     listAvailablePhysicalDevices(vkInitData);
 
+    cout << "** Chosen Physical Device: ********" << endl;
+    printPhysicalDeviceProperties(vkInitData.physicalDevice);
+
     uint32_t apiVersion = vk::enumerateInstanceVersion();
     cout << "Loader supports Vulkan " 
             << VK_VERSION_MAJOR(apiVersion) << "."
