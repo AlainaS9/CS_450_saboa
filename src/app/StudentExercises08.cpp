@@ -108,52 +108,7 @@ void listAvailablePhysicalDevices(VulkanInitData &vkInitData) {
 int main(int argc, char **argv) {
     cout << "BEGIN EXERCISES!!!!" << endl;
 
-    glm::vec3 A(1,4,0);
-    glm::vec3 B(2,3,2);
-
-    cout << "A: " << glm::to_string(A) << endl;
-    cout << "B: " << glm::to_string(B) << endl;
-
-    cout << "A.y = " << A.y << " A.g = " << A.g << endl;
-
-    glm::vec3 C = B = A;
-    cout << "C: " << glm::to_string(C) << endl;
-
-    float oldLenA = glm::length(A);
-    cout << "Old Length A: " << oldLenA << endl;
-    A = 5.0f*A;
-    float newLenA = glm::length(A);
-
-    glm::vec3 normA = glm::normalize(A);
-    cout << "Norm A: " << glm::to_string(normA) << endl;
-    cout << "Norm A Length: " << glm::length(normA) << endl;
-
-    glm::vec3 normB = glm::normalize(B);
-    float dotAB = glm::dot(normA, normB);
-    cout << "Dot(normA, normB): " << dotAB << endl;
-    float rad = glm::acos(dotAB);
-    float deg = glm::degrees(rad);
-    cout << "Angle: " << deg << endl;
-
-    glm::vec3 D(0,0,1);
-    float dotAD = glm::dot(normA, D);
-    cout << "Dot(normA, D): " << dotAD << endl;
-
-    glm::vec3 E(7,8,0);
-    glm::vec3 crossAE = glm::cross(A,E);
-    cout << "A x E: " << glm::to_string(crossAE) << endl;
-
-    /*
-    glm::vec3 D(0,1,-1);
-    D = glm::normalize(D);
-    glm::vec3 W = -D;
-    glm:: vec3 T(0,1,0);
-    glm::vec3 U = glm::normalize(glm::cross(T, W));
-    */
-
-
-
-    string appName = "StudentExercises07";
+    string appName = "StudentExercises08";
     string windowTitle = appName;
     int windowWidth = 640;
     int windowHeight = 480;

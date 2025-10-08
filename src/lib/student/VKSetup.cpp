@@ -147,6 +147,13 @@ namespace student {
          return false;
         }
 
+        VmaAllocatorCreateInfo vmaCreateInfo {};
+        vmaCreateInfo.instance = vkInitData.bootInstance.instance;
+        vmaCreateInfo.physicalDevice = vkbPhysicalDevice.physical_device;
+        vmaCreateInfo.device = vkInitData.bootDevice.device;
+        vmaCreateAllocator(&vmaCreateInfo, &(vkInitData.allocator));
+
+
         return true;
 
     }
@@ -154,6 +161,7 @@ namespace student {
     void cleanupVulkanSetup(VulkanInitData &vkInitData) {
         
         //TODO
+        vmaDestroyAllocator(vkInitData.allocator);
         cleanupVulkanSwapchain(vkInitData);
         
         vkInitData.device.destroy();

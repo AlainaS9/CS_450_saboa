@@ -45,6 +45,8 @@ struct VulkanInitData {
     VulkanQueue graphicsQueue {};
     VulkanQueue presentQueue {};
 
+    VmaAllocator allocator {};
+
 };
 
     bool getVulkanQueue(vkb::Device vkbDevice,
