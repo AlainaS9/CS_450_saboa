@@ -12,8 +12,14 @@ struct ForgeVertex {
 glm::vec3 pos;
 };
 
+enum Color { colorRed, colorBlue, colorGreen };
+Color currentColor = colorGreen;
+
 float green = 0.0f;
-float greenInc = 0.01f;
+float red = 1.0f;
+float blue = 0.0f;
+float colorInc = 0.01f;
+
 
 void recordCommands (VulkanInitData &vkInitData, uint32_t indexFIF, uint32_t indexSwap,
                         vk::CommandBuffer &commandBuffer, 
@@ -42,12 +48,35 @@ void recordCommands (VulkanInitData &vkInitData, uint32_t indexFIF, uint32_t ind
             .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
             .setLoadOp(vk::AttachmentLoadOp::eClear)
             .setStoreOp(vk::AttachmentStoreOp::eStore)
-            .setClearValue(vk::ClearColorValue(1.0f, green, 0.0f, 1.0f));
+            .setClearValue(vk::ClearColorValue(red, green, blue, 1.0f));
 
-    green += greenInc;
-    if(green > 1.0f) {
-        green = 0.0f;
+    if(green >= 1.0) {
+        currentColor = colorBlue;
     }
+    if(blue >= 1.0) {
+        currentColor = colorRed;
+    }
+    if(red >= 1.0) {
+        currentColor = colorGreen;
+    }
+
+    
+    switch(currentColor) {
+        case colorRed:
+            red += colorInc;
+            blue = blue - colorInc;
+            break;
+        case colorGreen:
+            green += colorInc;
+            red = red - colorInc;
+            break;
+        case colorBlue:
+            blue += colorInc;
+            green = green - colorInc;
+            break;
+    }
+
+    // the cool background thing I did is rotating through the colors
 
     vk::RenderingInfoKHR renderInfo {};
     renderInfo.setRenderArea(vk::Rect2D{ {0,0}, vkInitData.swapchain.extent })
