@@ -9,7 +9,7 @@ using namespace std;
 using namespace student;
 
 struct ForgeVertex {
-glm::vec3 pos;
+    glm::vec3 pos;
 };
 
 float green = 0.0f;
