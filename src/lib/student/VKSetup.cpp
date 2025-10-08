@@ -147,11 +147,13 @@ namespace student {
          return false;
         }
 
+        
         VmaAllocatorCreateInfo vmaCreateInfo {};
         vmaCreateInfo.instance = vkInitData.bootInstance.instance;
         vmaCreateInfo.physicalDevice = vkbPhysicalDevice.physical_device;
         vmaCreateInfo.device = vkInitData.bootDevice.device;
         vmaCreateAllocator(&vmaCreateInfo, &(vkInitData.allocator));
+        
 
 
         return true;
