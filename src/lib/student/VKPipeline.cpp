@@ -2,6 +2,8 @@
 
 namespace student {
 
+    vk::PipelineLayoutCreateInfo layoutInfo({}, {}, pushConstantRanges);
+
     vk::ShaderModule createVulkanShaderModule(
         VulkanInitData &vkInitData,
         const vector<char> &code
@@ -66,7 +68,7 @@ namespace student {
     }
 
     void cleanupVulkanPipeline(
-        VulkanInitData &vkINitData, 
+        VulkanInitData &vkInitData, 
         VulkanPipelineData &pipelineData
     ) {
         // TODO

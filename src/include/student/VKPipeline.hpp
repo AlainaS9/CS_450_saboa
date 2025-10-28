@@ -27,6 +27,8 @@ namespace student {
 
         vk::PipelineRenderingCreateInfo renderInfo {};
 
+        vector<vk::PushConstantRange> VkPushConstantRanges {};
+
         
         // TODO
     };
@@ -44,7 +46,7 @@ namespace student {
     );
 
     void cleanupVulkanPipeline(
-        VulkanInitData &vkINitData, 
+        VulkanInitData &vkInitData, 
         VulkanPipelineData &pipelineData
     );
 
