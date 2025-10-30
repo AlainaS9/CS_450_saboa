@@ -4,12 +4,14 @@
 #include "student/VKCommand.hpp"
 #include "student/VKImage.hpp"
 #include "student/VKPipeline.hpp"
+#include "student/VKMesh.hpp"
 
 using namespace std;
 using namespace student;
 
 struct ForgeVertex {
     glm::vec3 pos;
+    glm::vec4 color;
 };
 
 struct UniformPush {
@@ -17,6 +19,7 @@ struct UniformPush {
 };
 
 glm::mat4 modelMat(1.0);
+string transformString = "v";
 
 float green = 0.0f;
 float greenInc = 0.01f;
@@ -46,13 +49,59 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int state, i
         if(key == GLFW_KEY_ESCAPE) {
             glfwSetWindowShouldClose(window, 1);
         }
+        else if(key == GLFW_KEY_Q) {
+            modelMat = glm::rotate(glm::radians(5.0f), glm::vec3(0,0,1))*modelMat;
+            transformString = "R(5)*" + transformString;
+        }
+        else if(key == GLFW_KEY_E) {
+            modelMat = glm::rotate(glm::radians(-5.0f), glm::vec3(0,0,1))*modelMat;
+            transformString = "R(-5)*" + transformString;
+        }
+        else if(key == GLFW_KEY_F) {
+            modelMat = glm::scale(glm::vec3(0.8f, 1.0f, 1.0f))*modelMat;
+            transformString = "S(0.8, 1.0)*" + transformString;
+        }
+        else if(key == GLFW_KEY_G) {
+            modelMat = glm::scale(glm::vec3(1.25f, 1.0f, 1.0f))*modelMat;
+            transformString = "S(01.25, 1.0)*" + transformString;
+        }
+        else if(key == GLFW_KEY_R) {
+            modelMat = glm::scale(glm::vec3(1.0f, 0.8f, 1.0f))*modelMat;
+            transformString = "S(1.0, 0.8)*" + transformString;
+        }
+        else if(key == GLFW_KEY_T) {
+            modelMat = glm::scale(glm::vec3(1.0f, 1.25f, 1.0f))*modelMat;
+            transformString = "S(1.0, 1.25)*" + transformString;
+        }
+        else if(key == GLFW_KEY_W) {
+            modelMat = glm::translate(glm::vec3(0.0f, 0.1f, 0.0f))*modelMat;
+            transformString = "T(0.0, 0.1)*" + transformString;
+        }
+        else if(key == GLFW_KEY_S) {
+            modelMat = glm::translate(glm::vec3(0.0f, -0.1f, 0.0f))*modelMat;
+            transformString = "T(0.0, -0.1)*" + transformString;
+        }
+        else if(key == GLFW_KEY_A) {
+            modelMat = glm::translate(glm::vec3(0.1f, 0.0f, 0.0f))*modelMat;
+            transformString = "T(0.1, 0.0)*" + transformString;
+        }
+        else if(key == GLFW_KEY_D) {
+            modelMat = glm::translate(glm::vec3(-0.1f, 0.0f, 0.0f))*modelMat;
+            transformString = "T(-0.1, 0.0)*" + transformString;
+        }
+        else if(key == GLFW_KEY_SPACE) {
+            modelMat = glm::mat4(1.0);
+            transformString = "v";
+        }
+        cout << transformString << endl;
     }
 }
 
 void recordCommands (VulkanInitData &vkInitData, uint32_t indexFIF, uint32_t indexSwap,
                         vk::CommandBuffer &commandBuffer, 
                         vk::QueryPool &queryPool,
-                        VulkanPipelineData &pipelineData) {
+                        VulkanPipelineData &pipelineData,
+                        VulkanMesh &mesh) {
     commandBuffer.begin(vk::CommandBufferBeginInfo());
 
     commandBuffer.resetQueryPool(queryPool, 0, 2);
@@ -76,7 +125,7 @@ void recordCommands (VulkanInitData &vkInitData, uint32_t indexFIF, uint32_t ind
             .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
             .setLoadOp(vk::AttachmentLoadOp::eClear)
             .setStoreOp(vk::AttachmentStoreOp::eStore)
-            .setClearValue(vk::ClearColorValue(1.0f, green, 0.0f, 1.0f));
+            .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.5f, 1.0f));
 
     /*
     green += greenInc;
@@ -111,9 +160,9 @@ void recordCommands (VulkanInitData &vkInitData, uint32_t indexFIF, uint32_t ind
         vk::ShaderStageFlagBits::eVertex,
         0, sizeof(UniformPush),
         &pc
-    )
+    );
 
-    recordDrawVulkanMesh(vkInitData, mesh);
+    recordDrawVulkanMesh(commandBuffer, mesh);
 
     commandBuffer.endRendering();
     
@@ -211,8 +260,15 @@ int main(int argc, char **argv) {
         0, //binding
         vk::Format::eR32G32B32Sfloat, //format
         offsetof(ForgeVertex, pos) //offset
-    )
-    );
+    ));
+
+    pipeInfo.attribDesc.push_back(vk::VertexInputAttributeDescription(
+        1, //location
+        0, //binding
+        vk::Format::eR32G32B32A32Sfloat, //format
+        offsetof(ForgeVertex, color) //offset
+    ));
+
     pipeInfo.renderInfo.colorAttachmentCount = 1;
     pipeInfo.renderInfo.pColorAttachmentFormats = &(vkInitData.swapchain.format);
     pipeInfo.renderInfo.depthAttachmentFormat = vk::Format::eD32Sfloat;
@@ -221,10 +277,26 @@ int main(int argc, char **argv) {
     pipeInfo.pushConstantRanges.push_back(
         {vk::ShaderStageFlagBits::eVertex, 0, sizeof(UniformPush)});
     
-
-
     // TODO 
     VulkanPipelineData pipelineData = createBasicVulkanPipeline(vkInitData, pipeInfo);
+
+    HostMesh<ForgeVertex> hostMesh;
+    hostMesh.vertices = {
+        {{-0.8f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f, 1.0f}},
+        {{+0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f, 1.0f}},
+        {{+0.5f, +0.5f, 0.5f}, {0.0f, 0.0f, 1.0f, 1.0f}},
+        {{-0.5f, +0.5f, 0.5f}, {1.0f, 1.0f, 0.0f, 1.0f}}
+    };
+    hostMesh.indices = {0,2,1, 2,0,3};
+
+    bool useStaging = true;
+    VulkanStagingData stagingData {};
+    if(useStaging) {
+        stagingData = beginStagingVulkanBufferCopies(
+                        vkInitData, commandData.commandPool);
+    }
+
+    VulkanMesh mesh = createVulkanMesh(vkInitData, hostMesh, useStaging);
 
 
     while(!glfwWindowShouldClose(window)) {
@@ -234,7 +306,7 @@ int main(int argc, char **argv) {
         uint32_t indexSwap = prepareFrameInFlight(vkInitData, commandData, indexFIF);
 
         recordCommands(vkInitData, indexFIF, indexSwap, commandData.perFIF[indexFIF].commandBuffer,
-                        queryPools[indexFIF], pipelineData);
+                        queryPools[indexFIF], pipelineData, mesh);
 
         submitToGraphicsQueue(vkInitData, commandData, indexFIF, indexSwap);
 

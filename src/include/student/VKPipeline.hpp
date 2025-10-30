@@ -27,7 +27,7 @@ namespace student {
 
         vk::PipelineRenderingCreateInfo renderInfo {};
 
-        vector<vk::PushConstantRange> VkPushConstantRanges {};
+        vector<vk::PushConstantRange> pushConstantRanges {};
 
         
         // TODO
