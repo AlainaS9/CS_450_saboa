@@ -47,8 +47,6 @@ namespace student {
             vertInfo, fragInfo
         };
 
-        // BIG TODO
-
         vk::PipelineVertexInputStateCreateInfo vertexInputInfo(
             {}, creationInfo.bindDesc, creationInfo.attribDesc
         );
@@ -56,6 +54,82 @@ namespace student {
         vk::PipelineInputAssemblyStateCreateInfo inputAssembly(
             {}, vk::PrimitiveTopology::eTriangleList, false
         );
+
+        vk::Viewport viewport(
+            0,
+            0,
+            (float)vkInitData.swapchain.extent.width,
+            (float)vkInitData.swapchain.extent.height,
+            0.0f,
+            1.0f
+        );
+
+        vk::PipelineLayoutCreateInfo pipelineLayoutInfo({}, {},creationInfo.pushConstantRanges);
+
+        vk::Rect2D scissor( {0,0}, vkInitData.swapchain.extent );
+
+        vk::PipelineViewportStateCreateInfo viewportState({}, viewport, scissor);
+
+        vector<vk::DynamicState> dynamicStates = {
+            vk::DynamicState::eViewport,
+            vk::DynamicState::eScissor
+        };
+
+        vk::PipelineDynamicStateCreateInfo dynamicState({}, dynamicStates);
+
+        vk::PipelineRasterizationStateCreateInfo rasterizer {};
+        rasterizer.lineWidth = 1.0f;
+        rasterizer.cullMode = vk::CullModeFlagBits::eNone;
+        rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
+
+
+        vk::PipelineColorBlendAttachmentState colorBlendAttachment {}; 
+        colorBlendAttachment.colorWriteMask =
+            vk::ColorComponentFlagBits::eR
+            | vk::ColorComponentFlagBits::eG
+            | vk::ColorComponentFlagBits::eB
+            | vk::ColorComponentFlagBits::eA;
+            vk::PipelineColorBlendStateCreateInfo colorBlending({}, false, vk::LogicOp::eCopy, colorBlendAttachment);
+
+
+        vk::PipelineDepthStencilStateCreateInfo depthStencil(
+            {},
+            true,
+            true,
+            vk::CompareOp::eLess,
+            false,
+            false,
+            {}, {}
+        );
+
+        vk::PipelineLayoutCreateInfo layoutInfo({}, {}, creationInfo.pushConstantRanges);
+        data.layout = vkInitData.device.createPipelineLayout(pipelineLayoutInfo);
+
+        vk::PipelineMultisampleStateCreateInfo multisample({}, vk::SampleCountFlagBits::e1);
+
+        data.cache = vkInitData.device.createPipelineCache(vk::PipelineCacheCreateInfo());
+
+        vk::GraphicsPipelineCreateInfo pinfo {};
+        pinfo.setFlags(vk::PipelineCreateFlags());
+        pinfo.setStages(shaderStages);
+        pinfo.setPVertexInputState(&vertexInputInfo);
+        pinfo.setPInputAssemblyState(&inputAssembly);
+        pinfo.setPViewportState(&viewportState);
+        pinfo.setPRasterizationState(&rasterizer);
+        pinfo.setPMultisampleState(&multisample);
+        pinfo.setPDepthStencilState(&depthStencil);
+        pinfo.setPColorBlendState(&colorBlending);
+        pinfo.setPDynamicState(&dynamicState);
+        pinfo.setLayout(data.layout);
+        pinfo.setPNext(&(creationInfo.renderInfo));
+        pinfo.setRenderPass(nullptr);
+        auto ret = vkInitData.device.createGraphicsPipeline(data.cache, pinfo);
+
+        if (ret.result != vk::Result::eSuccess) {
+            throw runtime_error("Failed to create graphics pipeline!");
+        }
+
+        data.graphicsPipeline = ret.value;
 
 
         cleanupVulkanShaderModule(vkInitData, vertMod);
@@ -66,11 +140,13 @@ namespace student {
     }
 
     void cleanupVulkanPipeline(
-        VulkanInitData &vkINitData, 
+        VulkanInitData &vkInitData, 
         VulkanPipelineData &pipelineData
     ) {
         // TODO
-
+        vkInitData.device.destroyPipelineCache(pipelineData.cache);
+        vkInitData.device.destroyPipelineLayout(pipelineData.layout);
+        vkInitData.device.destroyPipeline(pipelineData.graphicsPipeline);
 
     }
 
