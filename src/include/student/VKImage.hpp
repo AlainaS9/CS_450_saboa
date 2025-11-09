@@ -9,6 +9,30 @@ using namespace std;
 
 namespace student {
 
+    struct VulkanImage {
+        vk::Image image {};
+        vk::ImageView view {};
+        VmaAllocation allocation {};
+        vk::Extent3D extent {};
+        vk::Format format {};
+        uint32_t mipLevels {1};
+    };
+
+    VulkanImage createVulkanImage(
+        VulkanInitData &vkInitData,
+        vk::Extent3D extent,
+        vk::Format format,
+        vk::ImageUsageFlags usage,
+        vk::ImageAspectFlags aspectFlags,
+        uint32_t mipLevels,
+        vk::SampleCountFlagBits samples
+    );
+
+    void cleanupVulkanImage(
+        VulkanInitData &vkInitData,
+        VulkanImage &imageData
+    );
+
     struct VulkanImageTransition {
         vk::ImageMemoryBarrier barrier {};
         vk::PipelineStageFlags srcFlags {};
@@ -17,7 +41,8 @@ namespace student {
 
     enum VK_IMAGE_TRANSITION_TYPE {
         UNDEF_TO_COLOR,
-        COLOR_TO_PRESENT
+        COLOR_TO_PRESENT,
+        UNDEF_TO_DEPTH
     };
 
     VulkanImageTransition createVulkanImageTransition(
@@ -25,6 +50,14 @@ namespace student {
     );
     void performVulkanImageTransition(vk::CommandBuffer &commandBuffer,
                                         VulkanImageTransition &transitionData);
+
+    
+    void recreateAllVulkanDepthImages(VulkanInitData &vkInitData,
+                                        vk::CommandBuffer &commandBuffer,
+                                        vector<VulkanImage> &allDepthImages);
+
+    void cleanupAllVulkanDepthImages(VulkanInitData &vkInitData,
+                                        vector<VulkanImage> &allDepthImages);
 
 
 }
