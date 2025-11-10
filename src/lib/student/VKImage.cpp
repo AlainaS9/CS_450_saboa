@@ -98,6 +98,7 @@ namespace student {
                                             vk::PipelineStageFlagBits::eLateFragmentTests;
                 aspectFlags = vk::ImageAspectFlagBits::eDepth;
                 break;
+            }
             default: {
                 throw invalid_argument("Unsupported image transition!");
                 break;
@@ -117,7 +118,6 @@ namespace student {
         return transitionData;
 
     }
-    }
 
     
     void performVulkanImageTransition(vk::CommandBuffer &commandBuffer,
@@ -134,6 +134,8 @@ namespace student {
     void recreateAllVulkanDepthImages(VulkanInitData &vkInitData,
                                         vk::CommandBuffer &commandBuffer,
                                         vector<VulkanImage> &allDepthImages) {
+                                        }
+                                            
         
                                         
 
