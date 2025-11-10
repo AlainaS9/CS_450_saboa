@@ -97,7 +97,9 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int state, i
     }
 }
 
-void recordCommands (VulkanInitData &vkInitData, uint32_t indexFIF, uint32_t indexSwap,
+void recordCommands (VulkanInitData &vkInitData, 
+                        vector<VulkanImage> &allDepthImages,
+                        uint32_t indexFIF, uint32_t indexSwap,
                         vk::CommandBuffer &commandBuffer, 
                         vk::QueryPool &queryPool,
                         VulkanPipelineData &pipelineData,
@@ -134,10 +136,18 @@ void recordCommands (VulkanInitData &vkInitData, uint32_t indexFIF, uint32_t ind
     }
     */
 
+    vk::RenderingAttachmentInfoKHR depthAttach {};
+    depthAttach.setImageView(allDepthImages[indexSwap].view)
+                .setImageLayout(vk::ImageLayout::eDepthAttachmentOptimal)
+                .setLoadOp(vk::AttachmentLoadOp::eClear)
+                .setStoreOp(vk::AttachmentStoreOp::eStore)
+                .setClearValue(vk::ClearDepthStencilValue {1.0f, 0});
+
     vk::RenderingInfoKHR renderInfo {};
     renderInfo.setRenderArea(vk::Rect2D{ {0,0}, vkInitData.swapchain.extent })
                 .setLayerCount(1)
-                .setColorAttachments(colorAttach);
+                .setColorAttachments(colorAttach)
+                .setPDepthAttachment(&depthAttach);
 
     commandBuffer.beginRendering(renderInfo);
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
@@ -308,6 +318,10 @@ int main(int argc, char **argv) {
 
     bool useStaging = true;
     VulkanStagingData stagingData {};
+
+    vector<VulkanImage> allDepthImages {};
+    recreateAllVulkanDepthImages(vkInitData, stagingData.commandBuffer, allDepthImages);
+
     if(useStaging) {
         stagingData = beginStagingVulkanBufferCopies(
                         vkInitData, commandData.commandPool);
@@ -329,13 +343,20 @@ int main(int argc, char **argv) {
         uint32_t indexFIF = framesRendered % numberFramesInFlight;
         uint32_t indexSwap = prepareFrameInFlight(vkInitData, commandData, indexFIF);
 
-        recordCommands(vkInitData, indexFIF, indexSwap, commandData.perFIF[indexFIF].commandBuffer,
+        recordCommands(vkInitData, allDepthImages, indexFIF, indexSwap, commandData.perFIF[indexFIF].commandBuffer,
                         queryPools[indexFIF], pipelineData, allMeshes);
 
         submitToGraphicsQueue(vkInitData, commandData, indexFIF, indexSwap);
 
         if(!presentSwapImage(vkInitData, commandData, indexFIF, indexSwap)) {
             recreateVulkanSwapchain(vkInitData);
+            VulkanStagingData depthStage = beginStagingVulkanBufferCopies(
+                vkInitData, commandData.commandPool
+            );
+            recreateAllVulkanDepthImages(
+                vkInitData, depthStage.commandBuffer, allDepthImages);
+            endStagingVulkanBufferCopies(
+                vkInitData, commandData.commandPool, depthStage);
         }
 
         framesRendered++;
@@ -353,6 +374,8 @@ int main(int argc, char **argv) {
         }
 
     vkInitData.device.waitIdle();
+
+    cleanupAllVulkanDepthImages(vkInitData, allDepthImages);
 
     for(int i = 0; i < allMeshes.size(); i++) {
         cleanupVulkanMesh(vkInitData, allMeshes.at(i));

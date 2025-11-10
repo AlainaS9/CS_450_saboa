@@ -98,6 +98,7 @@ namespace student {
                                             vk::PipelineStageFlagBits::eLateFragmentTests;
                 aspectFlags = vk::ImageAspectFlagBits::eDepth;
                 break;
+            }
             default: {
                 throw invalid_argument("Unsupported image transition!");
                 break;
@@ -116,7 +117,7 @@ namespace student {
 
         return transitionData;
 
-    }
+    
     }
 
     
@@ -134,6 +135,27 @@ namespace student {
     void recreateAllVulkanDepthImages(VulkanInitData &vkInitData,
                                         vk::CommandBuffer &commandBuffer,
                                         vector<VulkanImage> &allDepthImages) {
+
+        if(allDepthImages.size() > 0) {
+            cleanupAllVulkanDepthImages(vkInitData, allDepthImages);
+        }
+
+        for(int i = 0; i < vkInitData.swapchain.images.size(); i++) {
+            VulkanImage depthImage = createVulkanImage(
+                vkInitData,
+                { vkInitData.swapchain.extent.width,
+                  vkInitData.swapchain.extent.height,
+                  1  },
+                vk::Format::eD32Sfloat, vk::ImageUsageFlagBits::eDepthStencilAttachment,
+                vk::ImageAspectFlagBits::eDepth, 1, vk::SampleCountFlagBits::e1
+            );
+            allDepthImages.push_back(depthImage);
+            VulkanImageTransition depthTransition = createVulkanImageTransition(
+                depthImage.image, VK_IMAGE_TRANSITION_TYPE::UNDEF_TO_DEPTH
+            );
+            performVulkanImageTransition(commandBuffer, depthTransition);
+        }
+    }                                  
         
                                         
 
