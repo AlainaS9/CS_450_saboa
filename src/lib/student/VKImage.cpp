@@ -99,7 +99,6 @@ namespace student {
                 aspectFlags = vk::ImageAspectFlagBits::eDepth;
                 break;
             }
-            }
             default: {
                 throw invalid_argument("Unsupported image transition!");
                 break;
