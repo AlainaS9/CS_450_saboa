@@ -5,6 +5,7 @@
 #include "student/VKImage.hpp"
 #include "student/VKPipeline.hpp"
 #include "student/VKMesh.hpp"
+#include "student/VKUniform.hpp"
 
 using namespace std;
 using namespace student;
@@ -17,6 +18,13 @@ struct ForgeVertex {
 struct UniformPush {
     alignas(16) glm::mat4 modelMat;
 };
+
+struct UBOVertex {
+    alignas(16) glm::mat4 viewMat;
+    alignas(16) glm::mat4 projMat;
+};
+
+UBOVertex uboVertHost {};
 
 glm::mat4 modelMat(1.0);
 string transformString = "v";
@@ -253,6 +261,10 @@ int main(int argc, char **argv) {
 
     uint64_t framesRendered = 0;
 
+    UBOData uboVertData = createVulkanUniformBufferData(
+        vkInitData, sizeof(UBOVertex), numberFramesInFlight
+    );
+
     vk::QueryPoolCreateInfo qpci {};
     qpci.queryType = vk::QueryType::eTimestamp;
     qpci.queryCount = 2;
@@ -288,6 +300,17 @@ int main(int argc, char **argv) {
 
     pipeInfo.pushConstantRanges.push_back(
         {vk::ShaderStageFlagBits::eVertex, 0, sizeof(UniformPush)});
+
+    vector<vk::DescriptorSetLayoutBinding> allBindings = {
+        vk::DescriptorSetLayoutBinding(
+            0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex
+        )
+    };
+
+    vk::DescriptorSetLayout layout = vkInitData.device.createDescriptorSetLayout(
+        { {}, allBindings }
+    );
+    pipeInfo.allDescSetLayouts = { layout };
     
 
     VulkanPipelineData pipelineData = createBasicVulkanPipeline(vkInitData, pipeInfo);
@@ -374,6 +397,8 @@ int main(int argc, char **argv) {
         }
 
     vkInitData.device.waitIdle();
+
+    cleanupVulkanUniformBufferData(vkInitData, uboVertData);
 
     cleanupAllVulkanDepthImages(vkInitData, allDepthImages);
 
