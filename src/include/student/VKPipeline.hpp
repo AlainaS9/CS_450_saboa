@@ -28,6 +28,7 @@ namespace student {
         vk::PipelineRenderingCreateInfo renderInfo {};
 
         vector<vk::PushConstantRange> pushConstantRanges {};
+        vector<vk::DescriptorSetLayout> allDescSetLayouts {};
 
         
         // TODO

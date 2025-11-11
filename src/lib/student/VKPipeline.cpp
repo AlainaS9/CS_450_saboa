@@ -102,7 +102,12 @@ namespace student {
             {}, {}
         );
 
-        vk::PipelineLayoutCreateInfo layoutInfo({}, {}, creationInfo.pushConstantRanges);
+        vk::PipelineLayoutCreateInfo layoutInfo(
+            {}, 
+            creationInfo.allDescSetLayouts, 
+            creationInfo.pushConstantRanges);
+
+
         data.layout = vkInitData.device.createPipelineLayout(pipelineLayoutInfo);
 
         vk::PipelineMultisampleStateCreateInfo multisample({}, vk::SampleCountFlagBits::e1);
@@ -143,7 +148,14 @@ namespace student {
         VulkanInitData &vkInitData, 
         VulkanPipelineData &pipelineData
     ) {
-        // TODO
+      /*        for(int i = 0; i < pipelineData.allDescSetLayouts.size(); i++) {
+            vkInitData.device.destroyDescriptorSetLayout(
+                pipelineData.allDescSetLayouts.at(i)
+            );
+            pipelineData.allDescSetLayouts.clear();
+        }
+            */
+
         vkInitData.device.destroyPipelineCache(pipelineData.cache);
         vkInitData.device.destroyPipelineLayout(pipelineData.layout);
         vkInitData.device.destroyPipeline(pipelineData.graphicsPipeline);
