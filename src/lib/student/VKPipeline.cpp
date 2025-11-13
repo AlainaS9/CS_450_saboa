@@ -64,7 +64,7 @@ namespace student {
             1.0f
         );
 
-        vk::PipelineLayoutCreateInfo pipelineLayoutInfo({}, {},creationInfo.pushConstantRanges);
+        vk::PipelineLayoutCreateInfo pipelineLayoutInfo({}, creationInfo.allDescSetLayouts, creationInfo.pushConstantRanges);
 
         vk::Rect2D scissor( {0,0}, vkInitData.swapchain.extent );
 
@@ -148,13 +148,13 @@ namespace student {
         VulkanInitData &vkInitData, 
         VulkanPipelineData &pipelineData
     ) {
-      /*        for(int i = 0; i < pipelineData.allDescSetLayouts.size(); i++) {
+        for(int i = 0; i < pipelineData.allDescSetLayouts.size(); i++) {
             vkInitData.device.destroyDescriptorSetLayout(
                 pipelineData.allDescSetLayouts.at(i)
             );
             pipelineData.allDescSetLayouts.clear();
         }
-            */
+            
 
         vkInitData.device.destroyPipelineCache(pipelineData.cache);
         vkInitData.device.destroyPipelineLayout(pipelineData.layout);

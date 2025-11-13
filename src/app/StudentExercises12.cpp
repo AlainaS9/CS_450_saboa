@@ -111,7 +111,9 @@ void recordCommands (VulkanInitData &vkInitData,
                         vk::CommandBuffer &commandBuffer, 
                         vk::QueryPool &queryPool,
                         VulkanPipelineData &pipelineData,
-                        vector<VulkanMesh> &allMeshes) {
+                        vector<VulkanMesh> &allMeshes,
+                        UBOData &uboVertData,
+                        vk::DescriptorSet &descriptorSet) {
     commandBuffer.begin(vk::CommandBufferBeginInfo());
 
     commandBuffer.resetQueryPool(queryPool, 0, 2);
@@ -178,6 +180,25 @@ void recordCommands (VulkanInitData &vkInitData,
         vk::ShaderStageFlagBits::eVertex,
         0, sizeof(UniformPush),
         &pc
+    );
+
+    //uboVertHost.viewMat = glm::mat4(1.0);
+    //uboVertHost.projMat = glm::mat4(1.0);
+
+    glm::vec3 eye = glm::vec3(1,0,1);
+    glm::vec3 center = glm::vec3(0,0,0);
+    glm::vec3 up = glm::vec3(0,1,0);
+
+    copyToHostVisibleVulkanBuffer(
+        vkInitData,
+        uboVertData.bufferData[indexFIF],
+        &uboVertHost
+    );
+
+    commandBuffer.bindDescriptorSets(
+        vk::PipelineBindPoint::eGraphics,
+        pipelineData.layout,
+        0, descriptorSet, {}
     );
 
     for(int i = 0; i < allMeshes.size(); i++) {
@@ -315,14 +336,61 @@ int main(int argc, char **argv) {
 
     VulkanPipelineData pipelineData = createBasicVulkanPipeline(vkInitData, pipeInfo);
 
+    vector<vk::DescriptorPoolSize> poolSizes = {
+        vk::DescriptorPoolSize(
+            vk::DescriptorType::eUniformBuffer,
+            numberFramesInFlight
+        )
+    };
+
+    vk::DescriptorPool descPool = vkInitData.device.createDescriptorPool(
+        vk::DescriptorPoolCreateInfo()
+            .setPoolSizes(poolSizes)
+            .setMaxSets(numberFramesInFlight)
+    );
+
+    vector<vk::DescriptorSetLayout> frameLayouts;
+    for(int i = 0; i < numberFramesInFlight; i++) {
+        frameLayouts.push_back(pipelineData.allDescSetLayouts.at(0));
+    }
+
+    vector<vk::DescriptorSet> descSets = vkInitData.device.allocateDescriptorSets(
+        vk::DescriptorSetAllocateInfo()
+            .setDescriptorPool(descPool)
+            .setDescriptorSetCount(numberFramesInFlight)
+            .setSetLayouts(frameLayouts)
+    );
+
+    for(int i = 0; i < numberFramesInFlight; i++) {
+        vector<vk::WriteDescriptorSet> writes {};
+
+        vk::DescriptorBufferInfo bufferVertInfo
+        = vk::DescriptorBufferInfo()
+            .setBuffer(uboVertData.bufferData[i].buffer)
+            .setOffset(0)
+            .setRange(sizeof(UBOVertex));
+
+        vk::WriteDescriptorSet bufferVertWrite
+        = vk::WriteDescriptorSet()
+            .setDstSet(descSets[i])
+            .setDstBinding(0)
+            .setDstArrayElement(0)
+            .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+            .setDescriptorCount(1)
+            .setBufferInfo(bufferVertInfo);
+
+        writes.push_back(bufferVertWrite);
+        vkInitData.device.updateDescriptorSets(writes, {});
+    };
+
     vector<HostMesh<ForgeVertex>> allHostMeshes {};
 
     HostMesh<ForgeVertex> hostMesh;
     hostMesh.vertices = {
-        {{-0.8f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f, 1.0f}},
-        {{+0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-        {{+0.5f, +0.5f, 0.5f}, {0.0f, 0.0f, 1.0f, 1.0f}},
-        {{-0.5f, +0.5f, 0.5f}, {1.0f, 1.0f, 0.0f, 1.0f}}
+        {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.0f}},
+        {{+0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f, 1.0f}},
+        {{+0.5f, +0.5f, -0.5f}, {0.0f, 0.0f, 1.0f, 1.0f}},
+        {{-0.5f, +0.5f, -0.5f}, {1.0f, 1.0f, 0.0f, 1.0f}}
     };
     hostMesh.indices = {0,2,1, 2,0,3};
     allHostMeshes.push_back(hostMesh);
@@ -330,10 +398,10 @@ int main(int argc, char **argv) {
     
     HostMesh<ForgeVertex> hostMesh2;
     hostMesh2.vertices = {
-        {{-0.1f, -0.25f, 0.7f}, {0.0f, 1.0f, 1.0f, 1.0f}},
-        {{+0.8f, -0.25f, 0.7f}, {0.0f, 1.0f, 1.0f, 1.0f}},
-        {{+0.8f, +0.25f, 0.7f}, {0.0f, 1.0f, 1.0f, 1.0f}},
-        {{-0.1f, +0.25f, 0.7f}, {0.0f, 1.0f, 1.0f, 1.0f}}
+        {{-0.1f, -0.25f, -0.7f}, {0.0f, 1.0f, 1.0f, 1.0f}},
+        {{+0.8f, -0.25f, -0.7f}, {0.0f, 1.0f, 1.0f, 1.0f}},
+        {{+0.8f, +0.25f, -0.7f}, {0.0f, 1.0f, 1.0f, 1.0f}},
+        {{-0.1f, +0.25f, -0.7f}, {0.0f, 1.0f, 1.0f, 1.0f}}
     };
     hostMesh2.indices = {0,2,1, 2,0,3};
     allHostMeshes.push_back(hostMesh2);
@@ -367,7 +435,7 @@ int main(int argc, char **argv) {
         uint32_t indexSwap = prepareFrameInFlight(vkInitData, commandData, indexFIF);
 
         recordCommands(vkInitData, allDepthImages, indexFIF, indexSwap, commandData.perFIF[indexFIF].commandBuffer,
-                        queryPools[indexFIF], pipelineData, allMeshes);
+                        queryPools[indexFIF], pipelineData, allMeshes, uboVertData, descSets[indexFIF]);
 
         submitToGraphicsQueue(vkInitData, commandData, indexFIF, indexSwap);
 
@@ -397,6 +465,8 @@ int main(int argc, char **argv) {
         }
 
     vkInitData.device.waitIdle();
+
+    vkInitData.device.destroyDescriptorPool(descPool);
 
     cleanupVulkanUniformBufferData(vkInitData, uboVertData);
 

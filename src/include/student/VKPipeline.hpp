@@ -38,6 +38,7 @@ namespace student {
         vk::PipelineCache cache {};
         vk::PipelineLayout layout {};
         vk::Pipeline graphicsPipeline {};
+        vector<vk::DescriptorSetLayout> allDescSetLayouts {};
         // TODO
     };
 
