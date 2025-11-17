@@ -32,6 +32,8 @@ string transformString = "v";
 float green = 0.0f;
 float greenInc = 0.01f;
 
+glm::vec3 eye = glm::vec3(1,0,1);
+
 void printRM(string name, glm::mat3 &m) {
     cout << name << ":" << endl;
     for(int i = 0; i < 3; i++) {
@@ -185,9 +187,23 @@ void recordCommands (VulkanInitData &vkInitData,
     //uboVertHost.viewMat = glm::mat4(1.0);
     //uboVertHost.projMat = glm::mat4(1.0);
 
-    glm::vec3 eye = glm::vec3(1,0,1);
+    glm::vec4 eye4 = glm::vec4(eye, 1.0f);
+    eye4 = glm::rotate(glm::radians(1.0f), glm::vec3(0,1,0))*eye4;
+    eye = glm::vec3(eye4);
+
     glm::vec3 center = glm::vec3(0,0,0);
     glm::vec3 up = glm::vec3(0,1,0);
+
+    uboVertHost.viewMat = glm::lookAt(eye, center, up);
+
+    float fovAngle = glm::radians(90.0f);
+    float width = vkInitData.swapchain.extent.width;
+    float height = vkInitData.swapchain.extent.height;
+    float aspectRatio = width/height;
+    float near = 0.01f;
+    float far = 100.0f;
+    uboVertHost.projMat = glm::perspective(fovAngle, aspectRatio, near, far);
+    uboVertHost.projMat[1][1] *= -1.0f;
 
     copyToHostVisibleVulkanBuffer(
         vkInitData,
