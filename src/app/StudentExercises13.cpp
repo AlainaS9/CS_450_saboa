@@ -11,12 +11,23 @@ using namespace std;
 using namespace student;
 
 struct ForgeVertex {
-    glm::vec3 pos;
-    glm::vec4 color;
+    glm::vec3 pos = glm::vec3(0,0,0);
+    glm::vec4 color = glm::vec4(1,1,1,1);
+    glm::vec3 normal = glm::vec3(0,0,0);
+
+    ForgeVertex() {};
+    ForgeVertex(glm::vec3 p) {
+        pos = p;
+    }
+    ForgeVertex(glm::vec3 p , glm::vec4 c) {
+        pos = p;
+        color = c;
+    };
 };
 
 struct UniformPush {
     alignas(16) glm::mat4 modelMat;
+    alignas(16) glm::mat4 normMat;
 };
 
 struct UBOVertex {
@@ -55,8 +66,53 @@ void printRM(string name, glm::mat4 &m) {
 }
 
 bool leftMouseDown = false;
-
 glm::vec2 lastMousePos = glm::vec2(0,0);
+
+void makeCylinder(
+    HostMesh<ForgeVertex> &mesh,
+    float length,
+    float radius,
+    float faceCnt
+) {
+    float angleInc = glm::radians(360.0/(float)faceCnt);
+    float halfLen = length/2.0;
+    mesh.vertices.clear();
+    mesh.indices.clear();
+    // Vertices
+    for(int i = 0; i < faceCnt; i++) {
+        //Two vertices
+        float angle = angleInc*i;
+        float x = halfLen;
+        float y = radius * glm::sin(angle);
+        float z = radius * glm::cos(angle);
+
+        glm::vec3 left = glm::vec3(-x, y, z);
+        glm::vec3 right = glm::vec3(x, y, z);
+
+        ForgeVertex vleft = ForgeVertex(left, glm::vec4(1,0,0,1));
+        ForgeVertex vright = ForgeVertex(right, glm::vec4(0,1,0,1));
+
+        mesh.vertices.push_back(vleft);
+        mesh.vertices.push_back(vright);
+    }
+
+    // Indices
+    int vcnt = mesh.vertices.size();
+    for(int i = 0; i < faceCnt; i++) {
+        int i0 = i*2;
+        int i1 = i0 + 1;
+        int i2 = (i0 + 2)%vcnt;
+        int i3 = (i0 + 3)%vcnt;
+
+        mesh.indices.push_back(i0);
+        mesh.indices.push_back(i1);
+        mesh.indices.push_back(i2);
+
+        mesh.indices.push_back(i1);
+        mesh.indices.push_back(i3);
+        mesh.indices.push_back(i2);
+    }
+}
 
 static void mouse_position_callback(
     GLFWwindow *window,
@@ -65,7 +121,7 @@ static void mouse_position_callback(
 ) {
     glm::vec2 curPos(xpos, ypos);
     glm::vec2 relPos = curPos - lastMousePos;
-    cout << "RELATIVE MOUSE: " << glm::to_string(relPos) << endl;
+    //cout << "RELATIVE MOUSE: " << glm::to_string(relPos) << endl;
 
 
     //cout << "MOUSE: " << xpos << "," << ypos << endl;
@@ -218,19 +274,9 @@ void recordCommands (VulkanInitData &vkInitData,
     commandBuffer.setViewport(0, {viewport});
     commandBuffer.setScissor(0, {scissors});
 
-    UniformPush pc {};
-    pc.modelMat = modelMat;
-
-    commandBuffer.pushConstants(
-        pipelineData.layout,
-        vk::ShaderStageFlagBits::eVertex,
-        0, sizeof(UniformPush),
-        &pc
-    );
-
     //uboVertHost.viewMat = glm::mat4(1.0);
     //uboVertHost.projMat = glm::mat4(1.0);
-    if(!leftMouseDown) {
+    if(leftMouseDown) {
         glm::vec4 eye4 = glm::vec4(eye, 1.0f);
         eye4 = glm::rotate(glm::radians(1.0f), glm::vec3(0,1,0))*eye4;
         eye = glm::vec3(eye4);
@@ -254,6 +300,17 @@ void recordCommands (VulkanInitData &vkInitData,
         vkInitData,
         uboVertData.bufferData[indexFIF],
         &uboVertHost
+    );
+
+    UniformPush pc {};
+    pc.modelMat = modelMat;
+    pc.normMat = glm::mat4(glm::transpose(glm::inverse(glm::mat3(uboVertHost.viewMat*modelMat))));
+
+    commandBuffer.pushConstants(
+        pipelineData.layout,
+        vk::ShaderStageFlagBits::eVertex,
+        0, sizeof(UniformPush),
+        &pc
     );
 
     commandBuffer.bindDescriptorSets(
@@ -310,7 +367,7 @@ int main(int argc, char **argv) {
     glm::mat3 M = glm::mat3(1,2,3,4,5,6,7,8,9);
     printRM("Simple", M);
 
-    string appName = "StudentExercises12";
+    string appName = "StudentExercises13";
     string windowTitle = appName;
     int windowWidth = 640;
     int windowHeight = 480;
@@ -383,6 +440,13 @@ int main(int argc, char **argv) {
         0, //binding
         vk::Format::eR32G32B32A32Sfloat, //format
         offsetof(ForgeVertex, color) //offset
+    ));
+
+    pipeInfo.attribDesc.push_back(vk::VertexInputAttributeDescription(
+        2, //location
+        0, //binding
+        vk::Format::eR32G32B32Sfloat, //format
+        offsetof(ForgeVertex, normal) //offset
     ));
 
     pipeInfo.renderInfo.colorAttachmentCount = 1;
@@ -463,12 +527,11 @@ int main(int argc, char **argv) {
         writes.push_back(bufferVertWrite);
         vkInitData.device.updateDescriptorSets(writes, {});
     };
-
-    cout << "test2.5" << endl;
+    cout << "test3" << endl;
 
     vector<HostMesh<ForgeVertex>> allHostMeshes {};
-
     HostMesh<ForgeVertex> hostMesh;
+    /*
     hostMesh.vertices = {
         {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.0f}},
         {{+0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f, 1.0f}},
@@ -488,20 +551,29 @@ int main(int argc, char **argv) {
     };
     hostMesh2.indices = {0,2,1, 2,0,3};
     allHostMeshes.push_back(hostMesh2);
+    */
 
-    cout << "test3" << endl;
+    HostMesh<ForgeVertex> cylinder {};
+    makeCylinder(cylinder, 1.0, 0.5, 10);
+    allHostMeshes.push_back(cylinder);
 
+    cout << "hostmesh" << endl;
 
     bool useStaging = true;
     VulkanStagingData stagingData {};
-
+cout << "stagingdata" << endl;
     vector<VulkanImage> allDepthImages {};
+    cout << "ok" << endl;
     recreateAllVulkanDepthImages(vkInitData, stagingData.commandBuffer, allDepthImages);
+
+    cout << "recreateall.." << endl;
 
     if(useStaging) {
         stagingData = beginStagingVulkanBufferCopies(
                         vkInitData, commandData.commandPool);
     }
+
+    cout << "staging" << endl;
 
     vector<VulkanMesh> allMeshes {};
     for(int i = 0; i < allHostMeshes.size(); i++) {

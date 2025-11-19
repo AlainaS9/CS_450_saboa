@@ -66,6 +66,8 @@ namespace student {
 
         vk::PipelineLayoutCreateInfo pipelineLayoutInfo({}, creationInfo.allDescSetLayouts, creationInfo.pushConstantRanges);
 
+        data.allDescSetLayouts = creationInfo.allDescSetLayouts;
+
         vk::Rect2D scissor( {0,0}, vkInitData.swapchain.extent );
 
         vk::PipelineViewportStateCreateInfo viewportState({}, viewport, scissor);

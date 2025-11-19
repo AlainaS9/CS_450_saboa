@@ -143,9 +143,8 @@ namespace student {
         for(int i = 0; i < vkInitData.swapchain.images.size(); i++) {
             VulkanImage depthImage = createVulkanImage(
                 vkInitData,
-                { vkInitData.swapchain.extent.width,
-                  vkInitData.swapchain.extent.height,
-                  1  },
+                vk::Extent3D { vkInitData.swapchain.extent.width,
+                  vkInitData.swapchain.extent.height, 1 },
                 vk::Format::eD32Sfloat, vk::ImageUsageFlagBits::eDepthStencilAttachment,
                 vk::ImageAspectFlagBits::eDepth, 1, vk::SampleCountFlagBits::e1
             );
