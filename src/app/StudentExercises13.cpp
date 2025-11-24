@@ -37,6 +37,18 @@ struct UBOVertex {
 
 UBOVertex uboVertHost {};
 
+struct PointLight {
+    alignas(16) glm::vec4 pos;
+    alignas(16) glm::vec4 vpos;
+    alignas(16) glm::vec4 color;
+};
+
+struct UBOFragment {
+    PointLight light;
+};
+
+UBOFragment uboFragHost {};
+
 glm::mat4 modelMat(1.0);
 string transformString = "v";
 
@@ -67,6 +79,43 @@ void printRM(string name, glm::mat4 &m) {
 
 bool leftMouseDown = false;
 glm::vec2 lastMousePos = glm::vec2(0,0);
+
+void computeOneNormal(
+    vector<ForgeVertex> &vertices,
+    int i1,
+    int i2,
+    int i3) {
+        
+        glm::vec3 A = vertices[i1].pos;
+        glm::vec3 B = vertices[i2].pos;
+        glm::vec3 C = vertices[i3].pos;
+
+        glm::vec3 S1 = B - A;
+        glm::vec3 S2 = C - A;
+        glm::vec3 N = glm::normalize(glm::cross(S1, S2));
+
+        vertices[i1].normal += N;
+        vertices[i2].normal += N;
+        vertices[i3].normal += N;
+    }
+
+void computeAllNormals(
+    vector<ForgeVertex> &vertices,
+    vector<unsigned int> &indices) {
+
+        for(int i = 0; i < indices.size(); i += 3) {
+            computeOneNormal(
+                vertices,
+                indices[i],
+                indices[i+1],
+                indices[i+2]
+            );
+        }
+
+        for(int i = 0; i < vertices.size(); i++) {
+            vertices[i].normal = glm::normalize(vertices[i].normal);
+        }
+    }
 
 void makeCylinder(
     HostMesh<ForgeVertex> &mesh,
@@ -112,7 +161,10 @@ void makeCylinder(
         mesh.indices.push_back(i3);
         mesh.indices.push_back(i2);
     }
+
+    computeAllNormals(mesh.vertices, mesh.indices);
 }
+
 
 static void mouse_position_callback(
     GLFWwindow *window,
@@ -215,6 +267,7 @@ void recordCommands (VulkanInitData &vkInitData,
                         VulkanPipelineData &pipelineData,
                         vector<VulkanMesh> &allMeshes,
                         UBOData &uboVertData,
+                        UBOData &uboFragData,
                         vk::DescriptorSet &descriptorSet) {
     commandBuffer.begin(vk::CommandBufferBeginInfo());
 
@@ -300,6 +353,16 @@ void recordCommands (VulkanInitData &vkInitData,
         vkInitData,
         uboVertData.bufferData[indexFIF],
         &uboVertHost
+    );
+
+    uboFragHost.light.pos = glm::rotate(glm::radians(1.0f), glm::vec3(0.0,1.0,0.0))*uboFragHost.light.pos;
+
+    uboFragHost.light.vpos = uboVertHost.viewMat*uboFragHost.light.pos;
+
+    copyToHostVisibleVulkanBuffer(
+        vkInitData,
+        uboFragData.bufferData[indexFIF],
+        &uboFragHost
     );
 
     UniformPush pc {};
@@ -412,6 +475,13 @@ int main(int argc, char **argv) {
         vkInitData, sizeof(UBOVertex), numberFramesInFlight
     );
 
+    uboFragHost.light.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    uboFragHost.light.pos = glm::vec4(0.0f, 0.5f, 0.5f, 0.1f);
+
+    UBOData uboFragData = createVulkanUniformBufferData(
+        vkInitData, sizeof(UBOFragment), numberFramesInFlight
+    );
+
     cout << "test" << endl;
 
     vk::QueryPoolCreateInfo qpci {};
@@ -460,6 +530,9 @@ int main(int argc, char **argv) {
     vector<vk::DescriptorSetLayoutBinding> allBindings = {
         vk::DescriptorSetLayoutBinding(
             0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex
+        ),
+        vk::DescriptorSetLayoutBinding(
+            1, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex
         )
     };
 
@@ -473,10 +546,11 @@ int main(int argc, char **argv) {
 
     VulkanPipelineData pipelineData = createBasicVulkanPipeline(vkInitData, pipeInfo);
 
+    int uboCnt = 2;
     vector<vk::DescriptorPoolSize> poolSizes = {
         vk::DescriptorPoolSize(
             vk::DescriptorType::eUniformBuffer,
-            numberFramesInFlight
+            uboCnt*numberFramesInFlight
         )
     };
 
@@ -525,6 +599,25 @@ int main(int argc, char **argv) {
             .setBufferInfo(bufferVertInfo);
 
         writes.push_back(bufferVertWrite);
+
+
+        vk::DescriptorBufferInfo bufferFragInfo
+        = vk::DescriptorBufferInfo()
+            .setBuffer(uboFragData.bufferData[i].buffer)
+            .setOffset(0)
+            .setRange(sizeof(UBOFragment));
+
+        vk::WriteDescriptorSet bufferFragWrite
+        = vk::WriteDescriptorSet()
+            .setDstSet(descSets[i])
+            .setDstBinding(0)
+            .setDstArrayElement(0)
+            .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+            .setDescriptorCount(1)
+            .setBufferInfo(bufferFragInfo);
+
+        writes.push_back(bufferFragWrite);
+
         vkInitData.device.updateDescriptorSets(writes, {});
     };
     cout << "test3" << endl;
@@ -592,7 +685,7 @@ cout << "test3.5" << endl;
         uint32_t indexSwap = prepareFrameInFlight(vkInitData, commandData, indexFIF);
 
         recordCommands(vkInitData, allDepthImages, indexFIF, indexSwap, commandData.perFIF[indexFIF].commandBuffer,
-                        queryPools[indexFIF], pipelineData, allMeshes, uboVertData, descSets[indexFIF]);
+                        queryPools[indexFIF], pipelineData, allMeshes, uboVertData, uboFragData, descSets[indexFIF]);
 
         submitToGraphicsQueue(vkInitData, commandData, indexFIF, indexSwap);
 
@@ -626,6 +719,7 @@ cout << "test3.5" << endl;
 
     vkInitData.device.destroyDescriptorPool(descPool);
 
+    cleanupVulkanUniformBufferData(vkInitData, uboFragData);
     cleanupVulkanUniformBufferData(vkInitData, uboVertData);
 
     cleanupAllVulkanDepthImages(vkInitData, allDepthImages);
