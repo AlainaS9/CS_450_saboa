@@ -102,7 +102,7 @@ namespace student {
 
     void endStagingVulkanBufferCopies(
         VulkanInitData &vkInitData,
-        vk::CommandPool commandPool,
+        vk::CommandPool &commandPool,
         VulkanStagingData &stagingData
     ) {
         stagingData.commandBuffer.end();

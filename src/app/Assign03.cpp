@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
 
     };
     //this should be a heart shape
-    hostMesh.indices = {0,2,1, 2,0,3, 4,3,0, 3,4,5, 5,4,6, 6,0,5, 7,0,6};
+    hostMesh.indices = {0,2,1, 2,0,3, 4,3,0, 4,0,5, 6,0,5, 7,0,6};
 
     bool useStaging = true;
     VulkanStagingData stagingData {};
