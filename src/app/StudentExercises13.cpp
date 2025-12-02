@@ -367,7 +367,7 @@ void recordCommands (VulkanInitData &vkInitData,
 
     UniformPush pc {};
     pc.modelMat = modelMat;
-    pc.normMat = glm::mat4(glm::transpose(glm::inverse(glm::mat3(uboVertHost.viewMat*modelMat))));
+    pc.normMat = glm::mat4(glm::transpose(glm::inverse(glm::mat3(uboVertHost.viewMat*pc.modelMat))));
 
     commandBuffer.pushConstants(
         pipelineData.layout,
@@ -482,8 +482,6 @@ int main(int argc, char **argv) {
         vkInitData, sizeof(UBOFragment), numberFramesInFlight
     );
 
-    cout << "test" << endl;
-
     vk::QueryPoolCreateInfo qpci {};
     qpci.queryType = vk::QueryType::eTimestamp;
     qpci.queryCount = 2;
@@ -540,8 +538,6 @@ int main(int argc, char **argv) {
         { {}, allBindings }
     );
     pipeInfo.allDescSetLayouts = { layout };
-
-    cout << "test2" << endl;
     
 
     VulkanPipelineData pipelineData = createBasicVulkanPipeline(vkInitData, pipeInfo);
@@ -554,22 +550,16 @@ int main(int argc, char **argv) {
         )
     };
 
-    cout << "descpoolsize" << endl;
-
     vk::DescriptorPool descPool = vkInitData.device.createDescriptorPool(
         vk::DescriptorPoolCreateInfo()
             .setPoolSizes(poolSizes)
             .setMaxSets(numberFramesInFlight)
     );
 
-    cout << "descpool" << endl;
-
     vector<vk::DescriptorSetLayout> frameLayouts;
     for(unsigned int i = 0; i < numberFramesInFlight; i++) {
         frameLayouts.push_back(pipelineData.allDescSetLayouts.at(0));
     }
-
-    cout << "framelayouts" << endl;
 
     vector<vk::DescriptorSet> descSets = vkInitData.device.allocateDescriptorSets(
         vk::DescriptorSetAllocateInfo()
@@ -577,8 +567,6 @@ int main(int argc, char **argv) {
             .setDescriptorSetCount(numberFramesInFlight)
             .setSetLayouts(frameLayouts)
     );
-
-    cout << "descsets" << endl;
 
     for(int i = 0; i < numberFramesInFlight; i++) {
         vector<vk::WriteDescriptorSet> writes {};
@@ -620,11 +608,10 @@ int main(int argc, char **argv) {
 
         vkInitData.device.updateDescriptorSets(writes, {});
     };
-    cout << "test3" << endl;
 
     vector<HostMesh<ForgeVertex>> allHostMeshes {};
-    HostMesh<ForgeVertex> hostMesh;
     /*
+    HostMesh<ForgeVertex> hostMesh;
     hostMesh.vertices = {
         {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.0f}},
         {{+0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f, 1.0f}},
@@ -650,23 +637,13 @@ int main(int argc, char **argv) {
     makeCylinder(cylinder, 1.0, 0.5, 10);
     allHostMeshes.push_back(cylinder);
 
-    cout << "hostmesh" << endl;
-
     bool useStaging = true;
     VulkanStagingData stagingData {};
-cout << "stagingdata" << endl;
-    vector<VulkanImage> allDepthImages {};
-    cout << "ok" << endl;
-    recreateAllVulkanDepthImages(vkInitData, stagingData.commandBuffer, allDepthImages);
-
-    cout << "recreateall.." << endl;
 
     if(useStaging) {
         stagingData = beginStagingVulkanBufferCopies(
                         vkInitData, commandData.commandPool);
     }
-
-    cout << "staging" << endl;
 
     vector<VulkanMesh> allMeshes {};
     for(int i = 0; i < allHostMeshes.size(); i++) {
@@ -675,9 +652,11 @@ cout << "stagingdata" << endl;
         allMeshes.push_back(mesh);
     }
 
-    VulkanMesh mesh = createVulkanMesh(vkInitData, hostMesh, useStaging);
+    vector<VulkanImage> allDepthImages {};
+    recreateAllVulkanDepthImages(vkInitData, stagingData.commandBuffer, allDepthImages);
 
-cout << "test3.5" << endl;
+    //VulkanMesh mesh = createVulkanMesh(vkInitData, hostMesh, useStaging);
+
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -712,7 +691,6 @@ cout << "test3.5" << endl;
         double deltaNs = (timeStamps[1] - timeStamps[0])*nsPerTick;
 
       //  cout << "TIME PER FIF " << indexFIF << ": " << deltaNs << endl;
-      cout << "test4" << endl;
         }
 
     vkInitData.device.waitIdle();
