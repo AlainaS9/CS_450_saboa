@@ -24,13 +24,6 @@ struct UniformPush {
     alignas(16) glm::mat4 modelMat;
 };
 
-struct UBOVertex {
-    alignas(16) glm::mat4 viewMat;
-    alignas(16) glm::mat4 projMat;
-};
-
-UBOVertex uboVertHost {};
-
 glm::mat4 modelMat(1.0);
 string transformString = "v";
 
@@ -75,6 +68,7 @@ void extractMeshData(aiMesh *mesh, HostMesh<ForgeVertex> &m) {
     }
 
 }
+
 
 
 bool leftMouseDown = false;
@@ -173,6 +167,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int state, i
         cout << transformString << endl;
     }
 }
+
 
 
 void recordCommands (VulkanInitData &vkInitData, uint32_t indexFIF, uint32_t indexSwap,
@@ -292,6 +287,7 @@ int main(int argc, char **argv) {
 
     GLFWwindow *window = createGLFWWindow(windowTitle, windowWidth, windowHeight);
 
+    
     glfwSetKeyCallback(window, key_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetCursorPosCallback(window, mouse_position_callback);
@@ -301,6 +297,7 @@ int main(int argc, char **argv) {
     lastMousePos = glm::vec2(mx,my);
     
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    
 
     VulkanInitData vkInitData {};
     vkInitData.appName = appName;
@@ -424,6 +421,9 @@ int main(int argc, char **argv) {
         copyToVulkanMesh(vkInitData, mesh, sceneMesh, useStaging, stagingData);
 
         allMeshes.push_back(mesh);
+    }
+    if(useStaging) {
+        endStagingVulkanBufferCopies(vkInitData, commandData.commandPool, stagingData);
     }
 
     while(!glfwWindowShouldClose(window)) {
