@@ -475,5 +475,6 @@ int main(int argc, char **argv) {
     cleanupVulkanSetup(vkInitData);
     cleanupGLFWWindow(window);
 
+    
     return 0;
 }
